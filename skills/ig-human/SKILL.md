@@ -27,6 +27,16 @@ vocabulary that only shows up in captions and voiceovers. It is meant to be
 edited. If the user has a word they always use that the lexicon strips, take it
 out of the file.
 
+**Spanish.** Both scripts detect the language of the draft. Spanish drafts load
+`slop.es.json` instead (stock phrases like "en el mundo digital actual",
+"cabe destacar que", "potenciar", "brindamos"), and never the English lexicon,
+whose replacements would land English words in a Spanish sentence. After a
+replacement, `humanize.py` fixes the conjunction in front of it (y/e, o/u).
+Words that cannot be swapped without breaking gender agreement, like
+"excepcional" or "integrales", are flagged, not replaced. `detect.py` drops the
+contraction signal for Spanish, which has none to give. Force either language
+with `--lang es` or `--lang en`.
+
 ## Why this matters more on Instagram than it looks
 
 Captions are short and scripts get said out loud. A written-sounding line in a

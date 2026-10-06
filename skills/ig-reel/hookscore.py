@@ -36,14 +36,16 @@ import re
 import statistics
 import sys
 
-WORD_RE = re.compile(r"[A-Za-z0-9$%'’-]+")
+WORD_RE = re.compile(r"[A-Za-zÀ-ÖØ-öø-ÿ0-9$%'’-]+")
 NUMBER_RE = re.compile(
-    r"\$\s?\d[\d,]*(?:\.\d+)?"                       # money, whole
+    r"\$\s?\d[\d,.]*"                                # money, whole
     r"|\b\d[\d,]*(?:\.\d+)?\s?"                      # a figure, with or
     r"(?:%|k\b|x\b|hrs?\b|hours?\b|mins?\b|minutes?\b"  # without a unit
-    r"|days?\b|weeks?\b|months?\b|years?\b)?",
+    r"|days?\b|weeks?\b|months?\b|years?\b"
+    r"|horas?\b|minutos?\b|segundos?\b|d[ií]as?\b|semanas?\b|mes(?:es)?\b"
+    r"|a[ñn]os?\b|mil\b|millones\b|lucas?\b|uf\b)?",
     re.IGNORECASE)
-PROPER_RE = re.compile(r"(?<!^)\b[A-Z][a-z]{2,}\b")
+PROPER_RE = re.compile(r"(?<!^)\b[A-ZÁÉÍÓÚÑ][a-záéíóúüñ]{2,}\b")
 HASHTAG_RE = re.compile(r"(?:^|\s)#\w+")
 EMOJI_RE = re.compile(r"[\U0001F300-\U0001FAFF☀-➿]")
 
@@ -108,6 +110,109 @@ DEALBREAKERS = [
      "Emoji in the hook. On-screen text at hook size has room for words or for an emoji, not both."),
 ]
 
+# --- Spanish -----------------------------------------------------------------
+# Same five properties, Spanish vocabulary. Kept as separate sets so English
+# scoring is unchanged: "yo" is a weak opener in English and a strong one in
+# Spanish ("Yo perdí 2 millones..."), and "no" is an imperative only in Spanish.
+
+ES_SPOKEN_NUMBERS = {
+    "cero", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve",
+    "diez", "once", "doce", "quince", "veinte", "treinta", "cuarenta",
+    "cincuenta", "sesenta", "setenta", "ochenta", "noventa", "cien", "ciento",
+    "cientos", "mil", "miles", "millón", "millon", "millones", "docena",
+    "mitad", "doble", "triple",
+}
+ES_MONEY_WORDS = {
+    "pesos", "peso", "dólares", "dolares", "dólar", "dolar", "lucas", "luca",
+    "palos", "uf", "porciento", "centavos", "sueldo", "arriendo", "ventas",
+    "ganancia", "ganancias", "facturé", "facture", "factura", "boleta",
+    "millonario", "precio", "plata", "gratis",
+}
+ES_STAKES = {
+    "para", "deja", "dejes", "nunca", "jamás", "jamas", "mal", "error",
+    "errores", "perdí", "perdi", "perder", "pierdes", "perdiendo", "perdiste",
+    "cuesta", "costó", "costo", "caro", "quiebra", "quebré", "falla", "fallo",
+    "falló", "fracaso", "fracasé", "nadie", "no", "ni", "sin", "renuncié",
+    "renuncia", "despedido", "despidieron", "borré", "borra", "borrar",
+    "elimina", "eliminé", "mata", "mató", "reemplazó", "reemplaza",
+    "reemplazar", "gratis", "pagué", "pague", "pagas", "pagando", "cobran",
+    "cobré", "cobra", "ahorré", "ahorra", "ahorrar", "primer", "primera",
+    "prohibido", "ilegal", "peor", "odio", "odié", "botaste", "botando",
+    "estafa", "mentira", "mentí", "verdad", "secreto", "oculto", "robaron",
+    "robo", "antes", "hasta", "pero", "excepto", "salvo", "problema",
+    "riesgo", "peligro", "ojo", "cuidado", "alerta", "arrepiento",
+    "debería", "deberia", "deberías", "todavía", "todavia", "aún", "ya",
+    "solo", "sólo", "vs", "versus", "realmente", "cayó", "cae", "caído",
+    "caída", "hackearon", "hackeo", "vencido", "vence", "bloquearon",
+}
+ES_WEAK_OPENERS = [
+    "bueno", "ok", "okey", "hola", "chicos", "chiquillos", "amigos", "buenas",
+    "bienvenidos", "bienvenidas", "hoy", "básicamente", "basicamente",
+    "honestamente", "mira", "miren", "oye", "eh", "este", "entonces", "solo",
+    "quería", "queria", "quiero", "una de", "uno de", "has visto",
+    "sabías", "sabias", "sabes", "en este", "en el video", "en el día",
+    "lo que", "la cosa", "hay", "esto es", "este es", "como", "cuando se",
+]
+ES_IMPERATIVES = {
+    "deja", "para", "copia", "roba", "borra", "elimina", "prueba", "mira",
+    "lee", "guarda", "usa", "arma", "haz", "escribe", "manda", "envía",
+    "toma", "empieza", "revisa", "nunca", "siempre", "no", "pon", "cambia",
+    "olvida", "evita", "aprende", "compra", "cobra", "sube", "baja",
+    "activa", "desactiva", "configura", "instala", "renueva",
+}
+ES_ADDRESS_RE = re.compile(
+    r"\b(tú|tu|tus|te|ti|contigo|usted|ustedes|vos|tienes|sabes|puedes|"
+    r"necesitas|quieres|estás|estas|eres|haces|pagas|pierdes|vendes|"
+    r"cobras|tenés|sabés|podés)\b")
+ES_FIRST_RE = re.compile(r"\b(yo|mi|mis|me|nosotros|nos|nuestro|nuestra|nuestros|nuestras)\b")
+
+ES_DEALBREAKERS = [
+    (re.compile(r"(?i)^\s*(?:deja de (?:scrollear|deslizar|pasar)|no (?:sigas|pases|scrollees))"),
+     "Abre con \"deja de scrollear\". Pedir atención demuestra que no te la ganaste."),
+    (re.compile(r"(?i)\b(?:en (?:este|el) (?:video|reel) de hoy|en este (?:video|reel)|"
+                r"(?:hoy )?te voy a (?:mostrar|enseñar)|les voy a (?:mostrar|enseñar))\b"),
+     "Preámbulo de video. Bórralo y abre con lo que importa."),
+    (re.compile(r"(?i)^\s*(?:hola|buenas|qué tal|que tal|bienvenid[oa]s)\b"),
+     "Saludo. Nadie entró al feed para que lo saludaran."),
+]
+
+ES_HINTS = {
+    "el", "la", "los", "las", "un", "una", "que", "de", "del", "y", "en",
+    "es", "por", "para", "con", "tu", "te", "mi", "lo", "se", "su", "pero",
+    "nadie", "cómo", "como", "qué", "porque", "sin", "más", "mas", "yo",
+    "esto", "este", "esta", "tus", "muy", "hay", "ya", "todo",
+}
+EN_HINTS = {
+    "the", "a", "an", "and", "of", "to", "is", "in", "for", "with", "you",
+    "your", "my", "it", "this", "that", "on", "but", "nobody", "how", "what",
+    "i", "me", "be", "are", "was", "not", "don't", "just", "do",
+}
+
+
+def lang_of(text):
+    """'es' or 'en', from function words and Spanish-only characters."""
+    low = [x.lower().strip("'’") for x in words(text)]
+    es = sum(1 for x in low if x in ES_HINTS) + 2 * len(re.findall(r"[ñ¿¡áéíóú]", text.lower()))
+    en = sum(1 for x in low if x in EN_HINTS)
+    return "es" if es > en else "en"
+
+
+def vocab(lang):
+    if lang == "es":
+        return {
+            "spoken": SPOKEN_NUMBERS | ES_SPOKEN_NUMBERS,
+            "money": MONEY_WORDS | ES_MONEY_WORDS,
+            "stakes": ES_STAKES,
+            "weak": ES_WEAK_OPENERS,
+            "imperatives": ES_IMPERATIVES,
+            "dealbreakers": DEALBREAKERS + ES_DEALBREAKERS,
+        }
+    return {
+        "spoken": SPOKEN_NUMBERS, "money": MONEY_WORDS, "stakes": STAKES,
+        "weak": WEAK_OPENERS, "imperatives": IMPERATIVES,
+        "dealbreakers": DEALBREAKERS,
+    }
+
 
 def clamp(n):
     return max(0.0, min(100.0, n))
@@ -115,6 +220,8 @@ def clamp(n):
 
 def words(text):
     # "$18,000" is one word when it is spoken, so it is one word here too.
+    # Spanish writes thousands with a dot: "$18.000" is one word too.
+    text = re.sub(r"(?<=\d)\.(?=\d{3}\b)", "", text)
     return WORD_RE.findall(re.sub(r"(?<=\d),(?=\d)", "", text))
 
 
@@ -135,12 +242,12 @@ def check_length(text):
     return clamp(score), f"{n} words, {chars} chars, ~{secs:.1f}s spoken (want 5-12 words)"
 
 
-def check_specificity(text):
+def check_specificity(text, v):
     """One concrete thing beats three abstract ones."""
     nums = [n.strip() for n in NUMBER_RE.findall(text) if n.strip()]
     propers = set(PROPER_RE.findall(text))
     low = [w.lower().strip("'’") for w in words(text)]
-    spoken = [w for w in low if w in SPOKEN_NUMBERS or w in MONEY_WORDS]
+    spoken = [w for w in low if w in v["spoken"] or w in v["money"]]
     hits = len(nums) + len(propers) + len(spoken)
     score = 15.0 if hits == 0 else clamp(45 + hits * 30)
     found = ", ".join(nums[:2] + sorted(propers)[:2] + spoken[:2])
@@ -148,10 +255,10 @@ def check_specificity(text):
                    " - no number, no name, nothing checkable"))
 
 
-def check_stakes(text):
+def check_stakes(text, v):
     """Tension, cost, negation. Something the viewer might lose."""
     w = [x.lower().strip("'’") for x in words(text)]
-    hits = [x for x in w if x in STAKES]
+    hits = [x for x in w if x in v["stakes"]]
     markers = sorted(set(hits))
     if re.search(r"\$\s?\d", text):
         markers.append("a price")
@@ -162,7 +269,7 @@ def check_stakes(text):
     return clamp(score), detail
 
 
-def check_frontload(text):
+def check_frontload(text, v):
     """The interesting word cannot be in position nine."""
     w = words(text)
     if not w:
@@ -171,13 +278,13 @@ def check_frontload(text):
     opener = " ".join(low[:2])
     penalty = 0
     hit_opener = None
-    for weak in WEAK_OPENERS:
+    for weak in v["weak"]:
         if opener.startswith(weak) or low[0] == weak:
             penalty, hit_opener = 30, weak
             break
     payload = None
     for i, token in enumerate(low):
-        if (token in STAKES or token in SPOKEN_NUMBERS or token in MONEY_WORDS
+        if (token in v["stakes"] or token in v["spoken"] or token in v["money"]
                 or NUMBER_RE.match(w[i]) or (i and PROPER_RE.match(w[i]))):
             payload = i
             break
@@ -197,15 +304,17 @@ def check_frontload(text):
     return clamp(base - penalty), detail
 
 
-def check_address(text):
+def check_address(text, v, lang="en"):
     """Aimed at one viewer, or floating in the air."""
     low = text.lower()
     w = [x.lower().strip("'’") for x in words(text)]
-    if re.search(r"\b(you|your|you're|youre|yourself)\b", low):
+    if re.search(r"\b(you|your|you're|youre|yourself)\b", low) or (
+            lang == "es" and ES_ADDRESS_RE.search(low)):
         return 100.0, "speaks to the viewer"
-    if w and w[0] in IMPERATIVES:
+    if w and w[0] in v["imperatives"]:
         return 90.0, f"imperative opener (\"{w[0]}\")"
-    if re.search(r"\b(i|my|me|we|our)\b", low):
+    if re.search(r"\b(i|my|me|we|our)\b", low) or (
+            lang == "es" and ES_FIRST_RE.search(low)):
         return 70.0, "first person, no viewer named"
     return 35.0, "third person, nobody in the room"
 
@@ -213,15 +322,17 @@ def check_address(text):
 CHECKS = ["LENGTH", "SPECIFICITY", "STAKES", "FRONTLOAD", "ADDRESS"]
 
 
-def run(text):
+def run(text, lang=None):
+    lang = lang or lang_of(text)
+    v = vocab(lang)
     results = {
         "LENGTH": check_length(text),
-        "SPECIFICITY": check_specificity(text),
-        "STAKES": check_stakes(text),
-        "FRONTLOAD": check_frontload(text),
-        "ADDRESS": check_address(text),
+        "SPECIFICITY": check_specificity(text, v),
+        "STAKES": check_stakes(text, v),
+        "FRONTLOAD": check_frontload(text, v),
+        "ADDRESS": check_address(text, v, lang),
     }
-    flags = [msg for pattern, msg in DEALBREAKERS if pattern.search(text)]
+    flags = [msg for pattern, msg in v["dealbreakers"] if pattern.search(text)]
     scores = [results[c][0] for c in CHECKS]
     # The weakest property caps the hook, same logic as detect.py: one bad
     # property is enough for the thumb to keep moving.
@@ -273,7 +384,10 @@ def main():
     ap.add_argument("input", nargs="?", default="-", help="file with one hook per line, or -")
     ap.add_argument("--hook", help="score a single hook given on the command line")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--lang", choices=["auto", "en", "es"], default="auto",
+                    help="vocabulary to score with (default: detect per hook)")
     args = ap.parse_args()
+    lang = None if args.lang == "auto" else args.lang
 
     if args.hook:
         lines = [args.hook]
@@ -286,7 +400,7 @@ def main():
 
     payload = []
     for line in lines:
-        results, overall, verdict, flags = run(line)
+        results, overall, verdict, flags = run(line, lang)
         payload.append({
             "hook": line,
             "checks": {k: {"score": round(v[0], 1), "detail": v[1]} for k, v in results.items()},
@@ -301,7 +415,7 @@ def main():
         return
 
     if len(payload) == 1:
-        results, overall, verdict, flags = run(lines[0])
+        results, overall, verdict, flags = run(lines[0], lang)
         render_one(lines[0], results, overall, verdict, flags)
     else:
         render_table(sorted(payload, key=lambda r: -r["score"]))

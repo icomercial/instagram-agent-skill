@@ -67,6 +67,11 @@ on-screen line for each. Different formulas, not three rewrites of one.
 `hookscore.py`. Show the user the ranking. If the top one is under 50, you do
 not have the hook yet and no amount of editing fixes that.
 
+Write hooks and scripts in the user's language. `hookscore.py` and `beats.py`
+detect Spanish per hook and score it with Spanish vocabulary (stakes like
+"nadie", "perdí", "deja de"; viewer address like "tú", "te", "tienes"; Chilean
+money like "$450.000", "lucas", "UF"). Force it with `--lang es`.
+
 **3. Write the script** on the winning hook. Plain spoken language, the way the
 user actually talks. Contractions. Short lines. No sentence they would have to
 rehearse.

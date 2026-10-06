@@ -85,7 +85,9 @@ python3 caption.py draft.txt --keywords "client proposals,agency pricing"
 
 - **No link in the caption.** Captions are not clickable. A URL in the body is
   dead text that says "I do not use this platform". Bio or DM.
-- **One ask.** Two asks is the same as none. `caption.py` counts them.
+- **One ask.** Two asks is the same as none. `caption.py` counts them, in
+  English and in Spanish ("comenta", "escríbeme", "guárdalo", "sígueme",
+  "link en la bio"), and the same ask in both languages counts once.
 - **The keyword ask needs a keyword people can type.** One word, no spaces, no
   emoji, and say it out loud in the video too. `Comment CONTRACT` works.
   `Comment "the contract guide"` does not.

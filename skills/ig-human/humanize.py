@@ -33,6 +33,8 @@ import re
 import sys
 import unicodedata
 
+from lang import lexicon_path
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 LEX = os.path.join(HERE, "slop.json")
 
@@ -159,9 +161,24 @@ def pass_lexical(text, lex):
     text = re.sub(r"\n{3,}", "\n\n", text)
     # An em dash that became a comma, followed by a sentence connective, leaves
     # a splice ("is important, also, it's proof"). Promote it to a full stop.
-    text = re.sub(r",\s*(also|so|still|basically|in the end)\s*,\s*",
+    text = re.sub(r",\s*(also|so|still|basically|in the end|también|así que|igual|al final)\s*,\s*",
                   lambda m: ". " + m.group(1)[0].upper() + m.group(1)[1:] + ", ", text)
     return text, hits
+
+
+def fix_conjunctions(text):
+    """A replacement can leave "sólido e nuevo" or "rápido u barato" behind.
+
+    Spanish swaps y -> e before an /i/ sound and o -> u before an /o/ sound,
+    so once a word changes, the conjunction in front of it has to follow.
+    """
+    i_sound = r"(?:[iíIÍ]|[hH][iíIÍ])(?![aeouáéóúAEOU])"
+    o_sound = r"(?:[oóOÓ]|[hH][oóOÓ])"
+    text = re.sub(r"\be (?!" + i_sound + r")(?=[^\W\d_])", "y ", text)
+    text = re.sub(r"\by (?=" + i_sound + r")", "e ", text)
+    text = re.sub(r"\bu (?!" + o_sound + r")(?=[^\W\d_])", "o ", text)
+    text = re.sub(r"(?<=\w) o (?=" + o_sound + r")", " u ", text)
+    return text
 
 
 def scan_structures(text, lex):
@@ -196,10 +213,10 @@ def restore_capitals(original, text):
     a deliberately lower-case voice is a style, not an artefact, and shouting
     over it would be exactly the kind of thing this script exists to stop.
     """
-    starts = re.findall(r"(?:^|[.!?]\s+|\n)\s*([A-Za-z])", original)
+    starts = re.findall(r"(?:^|[.!?]\s+|\n)\s*[¿¡]?([^\W\d_])", original)
     if not starts or sum(1 for c in starts if c.isupper()) * 2 < len(starts):
         return text
-    return re.sub(r"(?:^|(?<=[.!?] )|(?<=[.!?]\n)|(?<=\n))\s*([a-z])",
+    return re.sub(r"(?:^|(?<=[.!?] )|(?<=[.!?]\n)|(?<=\n))\s*[¿¡]?([a-záéíóúüñ])",
                   lambda m: m.group(0)[:-1] + m.group(1).upper(), text)
 
 
@@ -209,6 +226,8 @@ def humanize(text, lex):
     text, inv = pass_invisible(text, lex)
     text, typo = pass_typographic(text, lex)
     text, lexi = pass_lexical(text, lex)
+    if lex.get("lang") == "es":
+        text = fix_conjunctions(text)
     text = restore_capitals(raw_for_case, text)
     text = restore_urls(text, urls)
     return text.strip() + "\n", {
@@ -259,11 +278,13 @@ def main():
     ap.add_argument("-o", "--out", help="write cleaned text here instead of stdout")
     ap.add_argument("--report", action="store_true", help="print what changed, to stderr")
     ap.add_argument("--json", action="store_true", help="emit {text, report} as JSON")
-    ap.add_argument("--lexicon", default=LEX, help="path to slop.json")
+    ap.add_argument("--lexicon", help="path to a lexicon (default: slop.json, "
+                                      "or slop.es.json when the draft is Spanish)")
+    ap.add_argument("--lang", choices=["auto", "en", "es"], default="auto")
     args = ap.parse_args()
 
     raw = sys.stdin.read() if args.input == "-" else open(args.input, encoding="utf-8").read()
-    lex = load_lexicon(args.lexicon)
+    lex = load_lexicon(args.lexicon or lexicon_path(HERE, raw, args.lang))
     clean, report = humanize(raw, lex)
 
     if args.json:

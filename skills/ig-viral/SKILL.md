@@ -116,7 +116,8 @@ python3 swipe.py captured.tsv --out ~/.claude/instagram/swipe.md
 ```
 
 It computes the outlier multiple, names the hook formula using the same 26
-formulas `/ig-reel` writes from, scores each hook with `hookscore.py`, and
+formulas `/ig-reel` writes from (each formula has an
+English `match` and a Spanish `match_es`, so Spanish reels classify too), scores each hook with `hookscore.py`, and
 prints what separates the top third from the bottom third.
 
 ## Step 4: say what it means, carefully

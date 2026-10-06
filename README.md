@@ -267,6 +267,24 @@ would rather know. The measurement script is not in the repo because it depends
 on `yt-dlp`, but the method is four lines and is written out in
 [`/ig-viral`](skills/ig-viral/SKILL.md).
 
+## En español
+
+This fork adds Spanish (written for Chile) without changing a single English
+score. Every script detects the language per hook or per draft:
+
+- `hookscore.py` and `beats.py` score Spanish with Spanish vocabulary: stakes
+  ("nadie", "perdí", "deja de"), viewer address ("tú", "te", "tienes"),
+  spoken numbers and Chilean money ("$450.000", "lucas", "UF"), weak openers
+  ("hola chicos", "en este video les voy a mostrar").
+- `hooks.json` carries a Spanish `match_es` next to every `match`, so
+  `/ig-viral` classifies Spanish reels into the same 26 formulas.
+- `caption.py` counts Spanish calls to action and Spanish filler hashtags.
+- `humanize.py` and `detect.py` load [`slop.es.json`](skills/ig-human/slop.es.json)
+  for Spanish drafts, fix y/e and o/u after a replacement, and flag rather than
+  replace anything that would break gender agreement.
+
+Force a language with `--lang es` or `--lang en`.
+
 ## The fine print, which is the honest part
 
 **These skills do not post to Instagram.** There is a real Content Publishing
@@ -319,6 +337,8 @@ skills/ig-reel/hookscore.py        the five-property hook panel
 skills/ig-reel/beats.py            script to timed beat sheet
 skills/ig-caption/caption.py       the truncation preview and the caption linter
 skills/ig-human/slop.json          the lexicon: 154 terms, 18 invisible classes, 16 tells
+skills/ig-human/slop.es.json       the Spanish lexicon, used when the draft is Spanish
+skills/ig-human/lang.py            tells Spanish from English
 skills/ig-human/humanize.py        the three cleaning passes
 skills/ig-human/detect.py          the five-check panel
 skills/ig-viral/swipe.py           outlier ranking and formula classification
